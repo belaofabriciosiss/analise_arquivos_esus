@@ -156,6 +156,16 @@ export default function Home() {
               Dashboard de Análise
             </h2>
             <div className="space-x-2 flex flex-wrap gap-y-4">
+              <button 
+                onClick={() => {
+                  import('@/lib/generatePdf').then(module => {
+                    module.generatePdf(derivedData.summaryData, derivedData.cnesData);
+                  });
+                }}
+                className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors shadow-lg shadow-purple-600/30"
+              >
+                Exportar Relatório PDF
+              </button>
               <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-emerald-400 px-4 py-2 rounded-full text-sm font-medium transition-colors border border-slate-700">
                 Adicionar mais pastas
                 <input 
