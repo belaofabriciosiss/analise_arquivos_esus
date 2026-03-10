@@ -11,26 +11,40 @@ import { RefreshCw } from 'lucide-react';
 
 export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [parsedFiles, setParsedFiles] = useState<ParsedFile[]>([]);
 
   const handleFilesSelected = async (files: File[]) => {
     setIsProcessing(true);
+    setProgress({ current: 0, total: files.length });
+    
     try {
-      // Process all files concurrently
-      const results = await Promise.all(
-        files.map((file) => parseEsusXml(file).catch(() => null))
-      );
+      const BATCH_SIZE = 100;
+      const validResults: ParsedFile[] = [];
+
+      for (let i = 0; i < files.length; i += BATCH_SIZE) {
+        const batch = files.slice(i, i + BATCH_SIZE);
+        
+        // Process batch
+        const results = await Promise.all(
+          batch.map((file) => parseEsusXml(file).catch(() => null))
+        );
+        
+        validResults.push(...results.filter((r): r is ParsedFile => r !== null));
+        
+        setProgress({ current: Math.min(i + BATCH_SIZE, files.length), total: files.length });
+        
+        // Yield to main thread to prevent UI freezing
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
       
-      // Filter out failed parses
-      const validResults = results.filter((r): r is ParsedFile => r !== null);
-      
-      // Append to existing if any
       setParsedFiles((prev) => [...validResults, ...prev]);
     } catch (error) {
       console.error('Error processing files:', error);
       alert('Houve um erro no processamento dos arquivos.');
     } finally {
       setIsProcessing(false);
+      setProgress({ current: 0, total: 0 });
     }
   };
 
@@ -122,7 +136,16 @@ export default function Home() {
       {isProcessing && (
         <div className="flex flex-col items-center justify-center p-24 text-slate-400">
           <RefreshCw className="w-12 h-12 animate-spin mb-4 text-blue-500" />
-          <p className="text-lg">Processando arquivos XML... Por favor, aguarde.</p>
+          <p className="text-lg font-medium text-slate-200 mb-2">Processando arquivos XML...</p>
+          <div className="w-64 bg-slate-800 rounded-full h-2 mb-2 overflow-hidden">
+            <div 
+              className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+              style={{ width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%` }}
+            ></div>
+          </div>
+          <p className="text-sm">
+            {progress.current} de {progress.total} arquivos lidos. Por favor, aguarde.
+          </p>
         </div>
       )}
 
