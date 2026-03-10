@@ -23,8 +23,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFilesSelected }) => {
   return (
     <div className="w-full flex-shrink-0 animate-fade-in">
       <div 
-        onClick={() => fileInputRef.current?.click()}
-        className="w-full max-w-2xl mx-auto border-2 border-dashed border-slate-600 hover:border-blue-500 rounded-2xl p-12 flex flex-col items-center justify-center cursor-pointer transition-colors duration-300 bg-slate-800/50 hover:bg-slate-800"
+        className="w-full max-w-2xl mx-auto border-2 border-dashed border-slate-600 hover:border-blue-500 rounded-2xl p-12 flex flex-col items-center justify-center transition-colors duration-300 bg-slate-800/50 hover:bg-slate-800"
       >
         <div className="bg-slate-700 p-4 rounded-full mb-4 shadow-lg shadow-blue-500/20">
           <UploadCloud className="w-10 h-10 text-blue-400" />
@@ -33,19 +32,33 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFilesSelected }) => {
           Faça upload dos seus arquivos XML
         </h3>
         <p className="text-slate-400 mb-6 text-center text-sm max-w-sm">
-          Selecione os arquivos `.esus.xml` gerados pelo sistema e-SUS APS. Todo o processamento é feito no seu navegador de forma segura.
+          Selecione uma pasta contendo os arquivos `.esus.xml` gerados pelo sistema e-SUS APS. Todo o processamento é feito no seu navegador de forma segura.
         </p>
-        <button className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-full font-medium transition-colors shadow-lg shadow-blue-600/30">
-          Selecionar Arquivos
-        </button>
-        <input 
-          ref={fileInputRef}
-          type="file" 
-          multiple 
-          accept=".xml" 
-          onChange={handleFileChange}
-          className="hidden" 
-        />
+        
+        <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+          <label className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-full font-medium transition-colors shadow-lg shadow-blue-600/30 text-center">
+            Selecionar Pasta
+            <input 
+              type="file" 
+              /* @ts-ignore - webkitdirectory is a non-standard but supported feature */
+              webkitdirectory="" 
+              directory="" 
+              multiple
+              onChange={handleFileChange}
+              className="hidden" 
+            />
+          </label>
+          <label className="cursor-pointer bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-full font-medium transition-colors border border-slate-600 text-center">
+            Selecionar Arquivos (Avulsos)
+            <input 
+              type="file" 
+              multiple 
+              accept=".xml" 
+              onChange={handleFileChange}
+              className="hidden" 
+            />
+          </label>
+        </div>
       </div>
     </div>
   );

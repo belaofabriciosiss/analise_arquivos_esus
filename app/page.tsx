@@ -132,8 +132,20 @@ export default function Home() {
             <h2 className="text-2xl font-semibold text-slate-200">
               Dashboard de Análise
             </h2>
-            <div className="space-x-4">
-              <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-blue-400 px-4 py-2 rounded-full font-medium transition-colors border border-slate-700">
+            <div className="space-x-2 flex flex-wrap gap-y-4">
+              <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-emerald-400 px-4 py-2 rounded-full text-sm font-medium transition-colors border border-slate-700">
+                Adicionar mais pastas
+                <input 
+                  type="file" 
+                  /* @ts-ignore - webkitdirectory supported by modern browsers */
+                  webkitdirectory="" 
+                  directory=""
+                  multiple 
+                  onChange={(e) => e.target.files && handleFilesSelected(Array.from(e.target.files))}
+                  className="hidden" 
+                />
+              </label>
+              <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-blue-400 px-4 py-2 rounded-full text-sm font-medium transition-colors border border-slate-700">
                 Adicionar mais arquivos
                 <input 
                   type="file" 

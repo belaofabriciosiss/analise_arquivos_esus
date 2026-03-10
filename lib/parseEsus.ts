@@ -24,10 +24,31 @@ export interface ParsedFile {
   participantsCount?: number; // For Atividade Coletiva
 }
 
+const countElementsByLocalName = (doc: Document, localName: string): number => {
+  let count = 0;
+  const elements = doc.getElementsByTagName('*');
+  for (let i = 0; i < elements.length; i++) {
+    if (elements[i].localName === localName) {
+      count++;
+    }
+  }
+  return count;
+};
+
+const getNodeTextByLocalName = (doc: Document, possibleLocalNames: string[]): string | null => {
+  const elements = doc.getElementsByTagName('*');
+  for (let i = 0; i < elements.length; i++) {
+    if (elements[i].localName && possibleLocalNames.includes(elements[i].localName)) {
+      return elements[i].textContent;
+    }
+  }
+  return null;
+};
+
 const parseDateInfo = (doc: Document): string => {
-  const dateNode = doc.querySelector('dataAtendimento');
-  if (dateNode && dateNode.textContent) {
-    const timeMs = parseInt(dateNode.textContent, 10);
+  const dateText = getNodeTextByLocalName(doc, ['dataAtendimento']);
+  if (dateText) {
+    const timeMs = parseInt(dateText, 10);
     if (!isNaN(timeMs)) {
       const date = new Date(timeMs);
       return date.toLocaleDateString('pt-BR');
@@ -37,12 +58,8 @@ const parseDateInfo = (doc: Document): string => {
 };
 
 const getCommonFields = (doc: Document) => {
-  const cnesNode = doc.querySelector('cnesDadoSerializado');
-  const cnes = cnesNode?.textContent || 'Sem CNES';
-
-  const uuidNode = doc.querySelector('uuidFicha') || doc.querySelector('uuid');
-  const uuid = uuidNode?.textContent || 'Sem UUID';
-
+  const cnes = getNodeTextByLocalName(doc, ['cnesDadoSerializado']) || 'Sem CNES';
+  const uuid = getNodeTextByLocalName(doc, ['uuidFicha', 'uuid']) || 'Sem UUID';
   const date = parseDateInfo(doc);
 
   return { cnes, uuid, date };
@@ -52,7 +69,7 @@ export const parseEsusXml = async (file: File): Promise<ParsedFile> => {
   const text = await file.text();
   const parser = new DOMParser();
   const doc = parser.parseFromString(text, 'text/xml');
-  const rootTag = doc.documentElement.tagName;
+  const rootTag = doc.documentElement.localName || doc.documentElement.tagName;
   
   const ctx = getCommonFields(doc);
   
@@ -63,46 +80,106 @@ export const parseEsusXml = async (file: File): Promise<ParsedFile> => {
   let isUpdate = false;
   let participantsCount = 0;
 
-  if (rootTag === 'ns4:fichaAtendimentoDomiciliarMasterTransport') {
+  if (rootTag.includes('fichaAtendimentoDomiciliarMasterTransport')) {
     type = 'FICHA DE ATENDIMENTO DOMICILIAR';
-    count = doc.querySelectorAll('atendimentosDomiciliares').length;
-  } else if (rootTag === 'ns4:fichaAtendimentoIndividualMasterTransport') {
+    count = countElementsByLocalName(doc, 'atendimentosDomiciliares');
+  } else if (rootTag.includes('fichaAtendimentoIndividualMasterTransport')) {
     type = 'FICHA DE ATENDIMENTO INDIVIDUAL';
-    count = doc.querySelectorAll('atendimentosIndividuais').length;
-  } else if (rootTag === 'ns4:fichaAtendimentoOdontologicoMasterTransport') {
+    count = countElementsByLocalName(doc, 'atendimentosIndividuais');
+  } else if (rootTag.includes('fichaAtendimentoOdontologicoMasterTransport')) {
     type = 'FICHA DE ATENDIMENTO ODONTOLÓGICO';
-    count = doc.querySelectorAll('atendimentosOdontologicos').length;
-  } else if (rootTag === 'ns4:fichaAtividadeColetivaTransport') {
+    count = countElementsByLocalName(doc, 'atendimentosOdontologicos');
+  } else if (rootTag.includes('fichaAtividadeColetivaTransport')) {
     type = 'FICHA DE ATIVIDADE COLETIVA';
     count = 1;
-    participantsCount = doc.querySelectorAll('participantes').length;
+    participantsCount = countElementsByLocalName(doc, 'participantes');
     extraInfo = `${participantsCount} participantes`;
-  } else if (rootTag === 'ns4:cadastroDomiciliarTransport') {
+  } else if (rootTag.includes('cadastroDomiciliarTransport')) {
     type = 'FICHA DE CADASTRO DOMICILIAR';
     count = 1;
-  } else if (rootTag === 'ns4:cadastroIndividualTransport') {
+  } else if (rootTag.includes('cadastroIndividualTransport')) {
     type = 'FICHA DE CADASTRO INDIVIDUAL';
     count = 1;
-    const isUpdateNode = doc.querySelector('fichaAtualizada');
-    if (isUpdateNode && isUpdateNode.textContent === 'true') {
+    const isUpdateText = getNodeTextByLocalName(doc, ['fichaAtualizada']);
+    if (isUpdateText === 'true') {
       isUpdate = true;
       extraInfo = 'Atualização Cadastral';
     } else {
       isNew = true;
       extraInfo = 'Novo Cadastro';
     }
-  } else if (rootTag === 'ns4:fichaConsumoAlimentarTransport') {
+  } else if (rootTag.includes('fichaConsumoAlimentarTransport')) {
     type = 'FICHA DE CONSUMO ALIMENTAR';
     count = 1;
-  } else if (rootTag === 'ns4:fichaAvaliacaoElegibilidadeTransport') {
+  } else if (rootTag.includes('fichaAvaliacaoElegibilidadeTransport')) {
     type = 'FICHA DE AVALIAÇÃO E ELEGIBILIDADE';
     count = 1;
-  } else if (rootTag === 'ns4:fichaProcedimentoMasterTransport') {
+  } else if (rootTag.includes('fichaProcedimentoMasterTransport')) {
     type = 'FICHA DE PROCEDIMENTO';
     count = 1;
-  } else if (rootTag === 'ns4:fichaVisitaDomiciliarMasterTransport') {
+  } else if (rootTag.includes('fichaVisitaDomiciliarMasterTransport')) {
     type = 'FICHA DE VISITA DOMICILIAR';
     count = 1;
+  } else if (rootTag.includes('dadoTransporte') || rootTag.includes('dadoInstalacao')) {
+    // If the tool wraps files inside these, we could try to look deeper.
+    // However, usually they just provide the master transport directly.
+    // If they have standard eSUS namespaces in root we'll still get DESCONHECIDO unless we look deeper.
+    // Let's also check if the document CONTAINS the tag inside.
+    const elements = doc.getElementsByTagName('*');
+    for (let i = 0; i < elements.length; i++) {
+        const local = elements[i].localName || '';
+        if (local.includes('fichaAtendimentoIndividualMasterTransport')) {
+            type = 'FICHA DE ATENDIMENTO INDIVIDUAL';
+            count = countElementsByLocalName(doc, 'atendimentosIndividuais');
+            break;
+        } else if (local.includes('fichaAtendimentoDomiciliarMasterTransport')) {
+            type = 'FICHA DE ATENDIMENTO DOMICILIAR';
+            count = countElementsByLocalName(doc, 'atendimentosDomiciliares');
+            break;
+        } else if (local.includes('fichaAtendimentoOdontologicoMasterTransport')) {
+            type = 'FICHA DE ATENDIMENTO ODONTOLÓGICO';
+            count = countElementsByLocalName(doc, 'atendimentosOdontologicos');
+            break;
+        } else if (local.includes('fichaAtividadeColetivaTransport')) {
+            type = 'FICHA DE ATIVIDADE COLETIVA';
+            count = 1;
+            participantsCount = countElementsByLocalName(doc, 'participantes');
+            extraInfo = `${participantsCount} participantes`;
+            break;
+        } else if (local.includes('cadastroDomiciliarTransport')) {
+            type = 'FICHA DE CADASTRO DOMICILIAR';
+            count = 1;
+            break;
+        } else if (local.includes('cadastroIndividualTransport')) {
+            type = 'FICHA DE CADASTRO INDIVIDUAL';
+            count = 1;
+            const isUpdateText = getNodeTextByLocalName(doc, ['fichaAtualizada']);
+            if (isUpdateText === 'true') {
+              isUpdate = true;
+              extraInfo = 'Atualização Cadastral';
+            } else {
+              isNew = true;
+              extraInfo = 'Novo Cadastro';
+            }
+            break;
+        } else if (local.includes('fichaConsumoAlimentarTransport')) {
+            type = 'FICHA DE CONSUMO ALIMENTAR';
+            count = 1;
+            break;
+        } else if (local.includes('fichaAvaliacaoElegibilidadeTransport')) {
+            type = 'FICHA DE AVALIAÇÃO E ELEGIBILIDADE';
+            count = 1;
+            break;
+        } else if (local.includes('fichaProcedimentoMasterTransport')) {
+            type = 'FICHA DE PROCEDIMENTO';
+            count = 1;
+            break;
+        } else if (local.includes('fichaVisitaDomiciliarMasterTransport')) {
+            type = 'FICHA DE VISITA DOMICILIAR';
+            count = 1;
+            break;
+        }
+    }
   }
 
   return {
