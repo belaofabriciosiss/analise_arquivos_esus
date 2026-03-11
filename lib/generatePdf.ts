@@ -5,6 +5,7 @@ import { ParsedFile } from './parseEsus';
 import { SummaryData } from '../components/SummaryTable';
 import { CnesData } from '../components/CnesTable';
 import { SISS_LOGO, GUAR_LOGO } from './logos';
+import { CNES_MAP } from './cnesMap';
 
 const pdfMake = pdfMakeLib as any;
 
@@ -25,12 +26,12 @@ export const generatePdf = (
           text: 'RELATÓRIO CONSOLIDADO DE\nEXPORTAÇÃO DAS FICHAS E-SUS',
           style: 'header',
           alignment: 'center',
-          margin: [0, 20, 0, 0]
+          margin: [0, 25, 0, 0] // Aumentada a margem superior de 20 para 35 para descer o texto
         },
         { image: GUAR_LOGO, width: 140, alignment: 'right' }
       ]
     },
-    { text: `Data da Exportação: ${currentDate}`, style: 'subheader', margin: [0, 30, 0, 10] },
+    { text: `Data da Exportação: ${currentDate}`, style: 'subheader', margin: [0, 40, 0, 10] }, // Desceu também a data
     { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1 }], margin: [0, 0, 0, 20] }
   ];
 
@@ -48,17 +49,16 @@ export const generatePdf = (
       content.push({
         table: {
           headerRows: 1,
-          widths: ['*', '*'],
+          widths: ['auto', '*', 'auto'],
           body: [
             [
               { text: 'Código CNES', style: 'tableHeader' },
-              { text: 'Qtde de Fichas Deste Tipo', style: 'tableHeader' }
+              { text: 'Nome do Estabelecimento', style: 'tableHeader' },
+              { text: 'Qtde Total de Fichas', style: 'tableHeader' }
             ],
-            ...relatedCnes.map(c => [
+            ...relatedCnes.sort((a,b) => b.filesCount - a.filesCount).map(c => [
               c.cnes,
-              // We don't have the exact count of THIS type in cnesData, 
-              // but we can estimate or just show the total files for this CNES to avoid complex re-grouping.
-              // Actually, since the prompt asks for "Tabela de Relação por CNES", we will just show the CNES that contain this type.
+              CNES_MAP[c.cnes] || 'Nome Desconhecido',
               c.filesCount.toLocaleString()
             ])
           ]
