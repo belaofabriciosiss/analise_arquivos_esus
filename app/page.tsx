@@ -96,17 +96,26 @@ export default function Home() {
         cnesMap.set(file.cnes, {
           cnes: file.cnes,
           filesCount: 0,
-          types: new Set()
-        });
+          totalRecords: 0,
+          types: new Set(),
+          typesCounts: {}
+        } as unknown as CnesData); // Cast to bypass interface mismatch here temporarily if needed
       }
-      const cnesData = cnesMap.get(file.cnes)!;
+      const cnesData = cnesMap.get(file.cnes) as any;
       cnesData.filesCount += 1;
+      cnesData.totalRecords += file.count;
       cnesData.types.add(file.type);
+      
+      if (!cnesData.typesCounts[file.type]) {
+        cnesData.typesCounts[file.type] = { files: 0, records: 0 };
+      }
+      cnesData.typesCounts[file.type].files += 1;
+      cnesData.typesCounts[file.type].records += file.count;
     }
 
     const chartData = Array.from(chartDataMap.entries()).map(([name, value]) => ({ name, value }));
     const summaryData = Array.from(summaryMap.values());
-    const cnesData = Array.from(cnesMap.values());
+    const cnesData = Array.from(cnesMap.values()) as CnesData[];
 
     return {
       totalRecords,
