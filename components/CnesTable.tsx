@@ -6,7 +6,9 @@ import { CNES_MAP } from '@/lib/cnesMap';
 export interface CnesData {
   cnes: string;
   filesCount: number;
+  totalRecords: number;
   types: Set<string>;
+  typesCounts: Record<string, { files: number, records: number }>;
 }
 
 interface CnesTableProps {
@@ -27,7 +29,8 @@ export const CnesTable: React.FC<CnesTableProps> = ({ data }) => {
             <tr>
               <th className="px-6 py-4 font-medium">Código CNES</th>
               <th className="px-6 py-4 font-medium">Estabelecimento</th>
-              <th className="px-6 py-4 font-medium text-right">Qtd. Fichas</th>
+              <th className="px-6 py-4 font-medium text-right">Qtd. Arquivos</th>
+              <th className="px-6 py-4 font-medium text-right">Qtd. Registros</th>
               <th className="px-6 py-4 font-medium">Tipos Presentes</th>
             </tr>
           </thead>
@@ -37,6 +40,7 @@ export const CnesTable: React.FC<CnesTableProps> = ({ data }) => {
                 <td className="px-6 py-4 font-mono font-medium text-blue-400">{row.cnes}</td>
                 <td className="px-6 py-4 text-emerald-400 font-medium">{CNES_MAP[row.cnes] || 'Nome Desconhecido'}</td>
                 <td className="px-6 py-4 text-right">{row.filesCount.toLocaleString()}</td>
+                <td className="px-6 py-4 text-right font-medium text-slate-200">{row.totalRecords.toLocaleString()}</td>
                 <td className="px-6 py-4">
                   <div className="flex flex-wrap gap-2">
                     {Array.from(row.types).map((t, idx) => (
