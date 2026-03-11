@@ -46,20 +46,27 @@ export const generatePdf = (
     const relatedCnes = cnesData.filter(c => c.types.has(ficha.type));
 
     if (relatedCnes.length > 0) {
+      
+      // Add text for total establishments below the file/records count
+      content.push({ text: `Qtde Estabelecimentos: ${relatedCnes.length.toLocaleString()}`, margin: [0, 0, 0, 10] });
+      
       content.push({
         table: {
           headerRows: 1,
-          widths: ['auto', '*', 'auto'],
+          widths: ['auto', '*', 'auto', 'auto'],
           body: [
             [
               { text: 'Código CNES', style: 'tableHeader' },
               { text: 'Nome do Estabelecimento', style: 'tableHeader' },
-              { text: 'Qtde Total de Fichas', style: 'tableHeader' }
+              { text: 'Qtde Arquivos', style: 'tableHeader' },
+              { text: 'Qtde Registros/Atendimentos', style: 'tableHeader' }
             ],
             ...relatedCnes.sort((a,b) => b.filesCount - a.filesCount).map(c => [
               c.cnes,
               CNES_MAP[c.cnes] || 'Nome Desconhecido',
-              c.filesCount.toLocaleString()
+              // Here we retrieve the specific count for THIS ficha type within this CNES
+              (c.typesCounts && c.typesCounts[ficha.type]) ? c.typesCounts[ficha.type].files.toLocaleString() : '0',
+              (c.typesCounts && c.typesCounts[ficha.type]) ? c.typesCounts[ficha.type].records.toLocaleString() : '0'
             ])
           ]
         },
